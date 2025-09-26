@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fiquid Flow Simulation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a, #1e40af, #0891b2);
+            min-height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+            display: block;
+        }
+
+        .header {
+            position: relative;
+            z-index: 10;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            color: #bfdbfe;
+            font-size: 1.125rem;
+        }
+
+        .toggle-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-panel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 20;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            padding: 24px;
+            width: 384px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .control-panel.hidden {
+            opacity: 0;
+            transform: translateX(100%);
+            pointer-events: none;
+        }
+
+        .control-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .control-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #1f2937;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .droplet-icon {
+            width: 24px;
+            height: 24px;
+            color: #2563eb;
+        }
+
+        .reset-btn {
+            padding: 8px;
+            border-radius: 8px;
+            background: #f3f4f6;
+            border: none;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .reset-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .control-group {
+            margin-bottom: 16px;
+        }
+
+        .control-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+            margin-bottom: 4px;
+        }
+
+        .control-label.hidden {
+            display: none;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            background: #e5e7eb;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .pattern-section {
+            border-top: 1px solid #e5e7eb;
+            padding-top: 24px;
+            margin-top: 24px;
+        }
+
+        .pattern-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pattern-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .waves-icon {
+            width: 20px;
+            height: 20px;
+            color: #2563eb;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .pattern-btn {
+            padding: 12px;
+            border-radius: 8px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #4b5563;
+        }
+
+        .pattern-btn:hover {
+            border-color: #d1d5db;
+            background: #f9fafb;
+        }
+
+        .pattern-btn.active {
+            border-color: #3b82f6;
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+
+        .pattern-icon {
+            font-size: 1.125rem;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .pattern-name {
+            font-size: 0.75rem;
+        }
+
+        .current-pattern {
+            margin-top: 12px;
+            padding: 12px;
+            background: #eff6ff;
+            border-radius: 8px;
+        }
+
+        .current-pattern p {
+            font-size: 0.875rem;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 24px;
+            left: 24px;
+            right: 24px;
+            z-index: 10;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.875rem;
+        }
+
+        .footer.hidden {
+            display: none;
+        }
+
+        .rotate-icon {
+            width: 18px;
+            height: 18px;
+        }
+
+        .instructions {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .instructions p {
+            font-size: 0.75rem;
+            color: #6b7280;
+            text-align: center;
+        }
+
+        .instructions.hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div class="header">
+        <div>
+            <h1>Liquid Flow Simulation</h1>
+            <p>Interactive water dynamics with multiple flow patterns</p>
+        </div>
+        <button class="toggle-btn" onclick="toggleControls()">
+            <span id="toggleText">Hide Controls</span>
+        </button>
+    </div>
+
+    <div class="control-panel" id="controlPanel">
+        <div class="control-header">
+            <h2 class="control-title">
+                <svg class="droplet-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.5 8.5L12 3l4.5 5.5c1.5 1.5 1.5 4 0 5.5s-4 1.5-5.5 0-1.5-4 0-5.5z"/>
+                </svg>
+                Liquid Controls
+            </h2>
+            <button class="reset-btn" onclick="resetSettings()" title="Reset to defaults">
+                <svg class="rotate-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="control-group">
+            <label class="control-label" id="liquidAmountLabel">Liquid Amount: 0.40</label>
+            <input type="range" class="slider" id="liquidAmount" min="0.1" max="1.0" step="0.05" value="0.4" 
+                   oninput="updateLiquidAmount(this.value)" onkeydown="handleSliderKeyDown(event)" onfocus="handleSliderFocus()">
+        </div>
+
+        <div class="control-group">
+            <label class="control-label" id="liquidSpeedLabel">Flow Speed: 1.0</label>
+            <input type="range" class="slider" id="liquidSpeed" min="0.2" max="3.0" step="0.1" value="1.0" 
+                   oninput="updateLiquidSpeed(this.value)" onkeydown="handleSliderKeyDown(event)" onfocus="handleSliderFocus()">
+        </div>
+
+        <div class="control-group">
+            <label class="control-label" id="pipeThicknessLabel">Pipe Thickness: 0.15</label>
+            <input type="range" class="slider" id="pipeThickness" min="0.05" max="0.4" step="0.05" value="0.15" 
+                   oninput="updatePipeThickness(this.value)" onkeydown="handleSliderKeyDown(event)" onfocus="handleSliderFocus()">
+        </div>
+
+        <div class="pattern-section">
+            <div class="pattern-header">
+                <svg class="waves-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                </svg>
+                <h3 class="pattern-title">Flow Patterns</h3>
+            </div>
+            
+            <div class="pattern-grid">
+                <button class="pattern-btn active" onclick="setFlowPattern(0)" id="pattern-0">
+                    <span class="pattern-icon">→</span>
+                    <span class="pattern-name">Classic</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(1)" id="pattern-1">
+                    <span class="pattern-icon">🌀</span>
+                    <span class="pattern-name">Spiral</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(2)" id="pattern-2">
+                    <span class="pattern-icon">⚡</span>
+                    <span class="pattern-name">Zigzag</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(3)" id="pattern-3">
+                    <span class="pattern-icon">🌿</span>
+                    <span class="pattern-name">Branch</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(4)" id="pattern-4">
+                    <span class="pattern-icon">〰️</span>
+                    <span class="pattern-name">Wave</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(5)" id="pattern-5">
+                    <span class="pattern-icon">🌪️</span>
+                    <span class="pattern-name">Tornado</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(6)" id="pattern-6">
+                    <span class="pattern-icon">💧</span>
+                    <span class="pattern-name">Cascade</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(7)" id="pattern-7">
+                    <span class="pattern-icon">🧬</span>
+                    <span class="pattern-name">Helix</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(8)" id="pattern-8">
+                    <span class="pattern-icon">❄️</span>
+                    <span class="pattern-name">Fractal</span>
+                </button>
+                <button class="pattern-btn" onclick="setFlowPattern(9)" id="pattern-9">
+                    <span class="pattern-icon">🌊</span>
+                    <span class="pattern-name">Vortex</span>
+                </button>
+            </div>
+
+            <div class="control-group">
+                <label class="control-label" id="patternIntensityLabel">Pattern Intensity: 1.0</label>
+                <input type="range" class="slider" id="patternIntensity" min="0.1" max="2.0" step="0.1" value="1.0" 
+                       oninput="updatePatternIntensity(this.value)" onkeydown="handleSliderKeyDown(event)" onfocus="handleSliderFocus()">
+            </div>
+
+            <div class="current-pattern" id="currentPattern">
+                <p>Active Pattern: Classic</p>
+            </div>
+        </div>
+
+        <div class="instructions" id="instructions">
+            <p>Move your mouse to orbit the camera • Press Enter in any field to toggle text visibility</p>
+        </div>
+    </div>
+
+    <div class="footer" id="footer">
+        <p>Move your mouse to orbit the camera • Press Enter to toggle controls</p>
+    </div>
+
+    <script>
+        // Global state
+        let showControls = true;
+        let showLabels = true;
+        let gl, program, uniforms;
+        let animationId;
+        let startTime = Date.now();
+        let mouse = { x: 0.5, y: 0.5 };
+        let smoothMouse = { x: 0.5, y: 0.5 };
+
+        // Default settings
+        const DEFAULT_SETTINGS = {
+            liquidAmount: 0.4,
+            liquidSpeed: 1.0,
+            pipeThickness: 0.15,
+            flowPattern: 0,
+            patternIntensity: 1.0
+        };
+
+        let settings = { ...DEFAULT_SETTINGS };
+
+        const FLOW_PATTERNS = [
+            { id: 0, name: 'Classic', icon: '→' },
+            { id: 1, name: 'Spiral', icon: '🌀' },
+            { id: 2, name: 'Zigzag', icon: '⚡' },
+            { id: 3, name: 'Branch', icon: '🌿' },
+            { id: 4, name: 'Wave', icon: '〰️' },
+            { id: 5, name: 'Tornado', icon: '🌪️' },
+            { id: 6, name: 'Cascade', icon: '💧' },
+            { id: 7, name: 'Helix', icon: '🧬' },
+            { id: 8, name: 'Fractal', icon: '❄️' },
+            { id: 9, name: 'Vortex', icon: '🌊' },
+        ];
+
+        // Vertex shader source
+        const vertexShaderSource = `
+            attribute vec2 a_position;
+            varying vec2 v_uv;
+
+            void main() {
+                v_uv = a_position * 0.5 + 0.5;
+                gl_Position = vec4(a_position, 0.0, 1.0);
+            }
+        `;
+
+        // Fragment shader source
+        const fragmentShaderSource = `
+            precision highp float;
+
+            uniform float u_time;
+            uniform vec2 u_resolution;
+            uniform vec2 u_mouse;
+            uniform float u_liquidAmount;
+            uniform float u_liquidSpeed;
+            uniform float u_pipeThickness;
+            uniform int u_flowPattern;
+            uniform float u_patternIntensity;
+
+            varying vec2 v_uv;
+
+            #define kRaymarchMaxIter 32
+            #define ENABLE_AMBIENT_OCCLUSION
+            #define DOUBLE_SIDED_TRANSPARENCY
+            #define ENABLE_SPECULAR
+            #define ENABLE_REFLECTIONS
+            #define ENABLE_TRANSPARENCY
+            #define ENABLE_SHADOWS
+            #define ENABLE_FOG
+            #define ENABLE_DIRECTIONAL_LIGHT
+            #define ENABLE_DIRECTIONAL_LIGHT_FLARE
+
+            const float kPipeRadius = 0.4;
+            const float kPipeHeight = 2.0;
+            const float kWaterNoiseScale = 0.025;
+            const float kWaterVelocity = 1.0;
+            const float kWaterAccel = -1.0;
+            const float kWaterAnimSpeed = 80.0;
+            const float kTrenchWaterAnimSpeed = 20.0;
+            
+            const float kPI = 3.141592654;
+            const float kTwoPI = kPI * 2.0;
+            const float kNoTransparency = -1.0;
+            const float kTransparency = 1.0;
+            const float kInverseTransparency = 0.0;
+
+            struct C_Ray {
+                vec3 vOrigin;
+                vec3 vDir;
+                float fStartDistance;
+                float fLength;
+            };
+
+            struct C_HitInfo {
+                vec3 vPos;
+                float fDistance;
+                vec3 vObjectId;
+            };
+                
+            struct C_Surface {
+                vec3 vNormal;
+                vec3 cReflection;
+                vec3 cTransmission;    
+            };
+
+            struct C_Material {
+                vec3 cAlbedo;
+                float fR0;
+                float fSmoothness;
+                vec2 vParam;
+                float fTransparency;
+                float fRefractiveIndex;
+            };
+
+            struct C_Shading {
+                vec3 cDiffuse;
+                vec3 cSpecular;
+            };
+
+            struct C_PointLight {
+                vec3 vPos;
+                vec3 cColour;
+            };
+
+            struct C_DirectionalLight {
+                vec3 vDir;
+                vec3 cColour;
+            };
+
+            vec4 DistCombineUnion( const in vec4 v1, const in vec4 v2 ) {
+                return mix(v1, v2, step(v2.x, v1.x));
+            }
+
+            vec4 DistCombineUnionTransparent( const in vec4 v1, const in vec4 v2, const in float fTransparentScale ) {    
+                vec4 vScaled = vec4(v2.x * (fTransparentScale * 2.0 - 1.0), v2.yzw);
+                return mix(v1, vScaled, step(vScaled.x, v1.x) * step(0.0, fTransparentScale));
+            }
+
+            vec4 DistCombineIntersect( const in vec4 v1, const in vec4 v2 ) {
+                return mix(v2, v1, step(v2.x,v1.x));
+            }
+
+            vec4 DistCombineSubtract( const in vec4 v1, const in vec4 v2 ) {
+                return DistCombineIntersect(v1, vec4(-v2.x, v2.yzw));
+            }
+
+            const float kMaterialIdWall = 1.0;
+            const float kMaterialIdPipe = 2.0;
+            const float kMaterialIdWater = 3.0;
+
+            float Noise(vec2 p) {
+                vec2 s = sin(p * 0.6345) + sin(p * 1.62423);
+                return dot(s, vec2(0.125)) + 0.5;
+            }
+
+            // Apply flow pattern transformations
+            vec3 applyFlowPattern(vec3 vWaterDomain, float t) {
+                vec3 result = vWaterDomain;
+                float intensity = u_patternIntensity;
+                
+                if (u_flowPattern == 1) { // Spiral
+                    float angle = t * intensity * 2.0;
+                    float radius = length(vWaterDomain.yz);
+                    result.y = radius * cos(angle + atan(vWaterDomain.z, vWaterDomain.y));
+                    result.z = radius * sin(angle + atan(vWaterDomain.z, vWaterDomain.y));
+                }
+                else if (u_flowPattern == 2) { // Zigzag
+                    result.y += sin(vWaterDomain.x * intensity * 3.0) * 0.2 * intensity;
+                    result.z += cos(vWaterDomain.x * intensity * 2.0) * 0.15 * intensity;
+                }
+                else if (u_flowPattern == 3) { // Branch
+                    float branch = sin(vWaterDomain.x * intensity * 1.5) * cos(vWaterDomain.x * intensity * 0.8);
+                    result.y += branch * 0.3 * intensity;
+                    result.z += sin(vWaterDomain.x * intensity * 2.2) * 0.2 * intensity;
+                }
+                else if (u_flowPattern == 4) { // Wave
+                    result.y += sin(vWaterDomain.x * intensity * 2.0) * 0.25 * intensity;
+                    result.z += sin(vWaterDomain.x * intensity * 1.5 + kPI * 0.5) * 0.2 * intensity;
+                }
+                else if (u_flowPattern == 5) { // Tornado
+                    float angle = vWaterDomain.x * intensity * 3.0;
+                    float radius = length(vWaterDomain.yz) + sin(vWaterDomain.x * intensity * 2.0) * 0.1 * intensity;
+                    result.y = radius * cos(angle);
+                    result.z = radius * sin(angle);
+                }
+                else if (u_flowPattern == 6) { // Cascade
+                    float cascade = floor(vWaterDomain.x * intensity * 2.0) * 0.1;
+                    result.y += cascade * intensity;
+                    result.z += sin(cascade * 10.0) * 0.1 * intensity;
+                }
+                else if (u_flowPattern == 7) { // Helix
+                    float angle = vWaterDomain.x * intensity * 4.0;
+                    float helixRadius = 0.1 * intensity;
+                    result.y += cos(angle) * helixRadius;
+                    result.z += sin(angle) * helixRadius;
+                }
+                else if (u_flowPattern == 8) { // Fractal
+                    float freq1 = sin(vWaterDomain.x * intensity * 3.0) * 0.2;
+                    float freq2 = sin(vWaterDomain.x * intensity * 7.0) * 0.1;
+                    float freq3 = sin(vWaterDomain.x * intensity * 15.0) * 0.05;
+                    result.y += (freq1 + freq2 + freq3) * intensity;
+                    result.z += (cos(vWaterDomain.x * intensity * 5.0) * 0.15 + cos(vWaterDomain.x * intensity * 11.0) * 0.08) * intensity;
+                }
+                else if (u_flowPattern == 9) { // Vortex
+                    float vortexAngle = atan(vWaterDomain.z, vWaterDomain.y) + vWaterDomain.x * intensity * 2.0;
+                    float vortexRadius = length(vWaterDomain.yz) * (1.0 + sin(vWaterDomain.x * intensity * 3.0) * 0.2 * intensity);
+                    result.y = vortexRadius * cos(vortexAngle);
+                    result.z = vortexRadius * sin(vortexAngle);
+                }
+                
+                return result;
+            }
+
+            vec4 GetDistanceScene( const in vec3 vPos, const in float fTransparentScale ) {          
+                vec4 vResult = vec4(10000.0, -1.0, 0.0, 0.0);
+                        
+                float fDistFloor = vPos.y;
+                float fDistBrick = fDistFloor;
+                
+                float fDistTrench = length(vPos.yz + vec2(-0.4, 0.0)) - 1.0;
+                fDistBrick = max(fDistBrick, -(fDistTrench));
+                
+                float fDistWall = vPos.x + 1.0;
+                fDistBrick = min(fDistBrick, fDistWall);
+                
+                vec4 vDistFloor = vec4(fDistBrick, kMaterialIdWall, vPos.xz + vec2(vPos.y, 0.0));
+                vResult = DistCombineUnion(vResult, vDistFloor);    
+
+                vec3 vWaterDomain = vPos - vec3(0.0, kPipeHeight, 0.0);
+
+                float t = max(vWaterDomain.x / (kWaterVelocity * u_liquidSpeed), 0.0);
+                
+                float s = 0.5 * kWaterAccel * t * t;
+                float v = -kWaterAccel * t;
+                
+                vWaterDomain.y -= s;    
+                
+                // Apply flow pattern
+                vWaterDomain = applyFlowPattern(vWaterDomain, t);
+                            
+                float fDistWater = (length(vWaterDomain.yz) - kPipeRadius * u_liquidAmount);
+                            
+                float fDistPipe = max(fDistWater - u_pipeThickness, vWaterDomain.x);
+                fDistPipe = max(fDistPipe, -fDistWater);
+                vec4 vDistPipe = vec4(fDistPipe, kMaterialIdPipe, vPos.xy);        
+                    
+                vResult = DistCombineUnion(vResult, vDistPipe);    
+                
+                fDistWater /= (1.0 + v * 0.5);
+                
+                vec2 vNoiseDomain = vPos.xz;
+                            
+                float fInTrench = step(vPos.y, (-0.1 + 0.05));        
+                
+                // Enhanced splash effects based on liquid amount
+                float splashIntensity = u_liquidAmount * 2.0;
+                float boundaryRipplePos = kPipeHeight * kWaterVelocity * u_liquidSpeed * 0.5 + u_time * kWaterVelocity * u_liquidSpeed;
+                
+                vec2 vBoundaryRippleCentre = vPos.xz - vec2(boundaryRipplePos, 0.0);
+                
+                vNoiseDomain.x = mix(vNoiseDomain.x, length(vBoundaryRippleCentre), fInTrench);
+                float fNoiseScale = mix(t * t, 1.0 / (1.0 + vNoiseDomain.x), fInTrench) * kWaterNoiseScale * splashIntensity;
+                float fWaterSpeed = mix(kWaterAnimSpeed * kWaterVelocity * u_liquidSpeed, kTrenchWaterAnimSpeed, fInTrench);
+                
+                vNoiseDomain *= 30.0; 
+                vNoiseDomain.x += -u_time * fWaterSpeed;
+                
+                float fTrenchWaterDist = vPos.y + 0.1;
+                fDistWater = min(fDistWater, fTrenchWaterDist);
+                
+                fDistWater += Noise(vNoiseDomain) * fNoiseScale;
+                
+                vec4 vDistWater = vec4(fDistWater, kMaterialIdWater, vPos.xy);        
+                vResult = DistCombineUnionTransparent(vResult, vDistWater, fTransparentScale);
+                          
+                return vResult;
+            }
+
+            float GetRayFirstStep( const in C_Ray ray ) {
+                return ray.fStartDistance;  
+            }
+
+            C_Material GetObjectMaterial( const in C_HitInfo hitInfo ) {
+                C_Material mat;
+                          
+                if(hitInfo.vObjectId.x == kMaterialIdWall) {
+                    mat.fR0 = 0.02;
+                    mat.cAlbedo = vec3(0.8, 0.7, 0.6);
+                    mat.fSmoothness = 0.3;
+                    mat.fTransparency = 0.0;
+                } else if(hitInfo.vObjectId.x == kMaterialIdPipe) {
+                    mat.fR0 = 0.8;
+                    mat.fSmoothness = 1.0;
+                    mat.cAlbedo = vec3(0.5);
+                    mat.fTransparency = 0.0;
+                } else {
+                    mat.fR0 = 0.01;
+                    mat.fSmoothness = 1.0;
+                    mat.fTransparency = 1.0;
+                    mat.fRefractiveIndex = 1.0 / 1.3330;
+                    const float fExtinctionScale = 2.0;
+                    const vec3 vExtinction = vec3(0.3, 0.7, 0.9);
+                    mat.cAlbedo = (vec3(1.0) - vExtinction) * fExtinctionScale;
+                }
+                
+                return mat;
+            }
+
+            vec3 GetSkyGradient( const in vec3 vDir ) {
+                const vec3 cColourTop = vec3(0.7, 0.8, 1.0);
+                const vec3 cColourHorizon = cColourTop * 0.5;
+                float fBlend = clamp(vDir.y, 0.0, 1.0);
+                return mix(cColourHorizon, cColourTop, fBlend);
+            }
+
+            C_DirectionalLight GetDirectionalLight() {
+                C_DirectionalLight result;
+                result.vDir = normalize(vec3(-0.2, -0.3, 0.5));
+                result.cColour = vec3(8.0, 7.5, 7.0);
+                return result;
+            }
+
+            vec3 GetAmbientLight(const in vec3 vNormal) {
+                return GetSkyGradient(vNormal);
+            }
+
+            vec3 GetSceneNormal( const in vec3 vPos, const in float fTransparentScale ) {
+                const float fDelta = 0.025;
+                vec3 vOffset1 = vec3( fDelta, -fDelta, -fDelta);
+                vec3 vOffset2 = vec3(-fDelta, -fDelta,  fDelta);
+                vec3 vOffset3 = vec3(-fDelta,  fDelta, -fDelta);
+                vec3 vOffset4 = vec3( fDelta,  fDelta,  fDelta);
+
+                float f1 = GetDistanceScene( vPos + vOffset1, fTransparentScale ).x;
+                float f2 = GetDistanceScene( vPos + vOffset2, fTransparentScale ).x;
+                float f3 = GetDistanceScene( vPos + vOffset3, fTransparentScale ).x;
+                float f4 = GetDistanceScene( vPos + vOffset4, fTransparentScale ).x;
+
+                vec3 vNormal = vOffset1 * f1 + vOffset2 * f2 + vOffset3 * f3 + vOffset4 * f4;
+                return normalize( vNormal );
+            }
+
+            #define kRaymarchEpsilon 0.01
+
+            void Raymarch( const in C_Ray ray, out C_HitInfo result, const int maxIter, const in float fTransparentScale ) {        
+                result.fDistance = GetRayFirstStep( ray );
+                result.vObjectId.x = 0.0;
+                    
+                for(int i=0;i<=kRaymarchMaxIter;i++) {
+                    result.vPos = ray.vOrigin + ray.vDir * result.fDistance;
+                    vec4 vSceneDist = GetDistanceScene( result.vPos, fTransparentScale );
+                    result.vObjectId = vSceneDist.yzw;
+                    
+                    if((abs(vSceneDist.x) <= kRaymarchEpsilon) || (result.fDistance >= ray.fLength) || (i > maxIter)) {
+                        break;
+                    }                        
+
+                    result.fDistance = result.fDistance + vSceneDist.x; 
+                }
+
+                if(result.fDistance >= ray.fLength) {
+                    result.fDistance = 1000.0;
+                    result.vPos = ray.vOrigin + ray.vDir * result.fDistance;
+                    result.vObjectId.x = 0.0;
+                }
+            }
+
+            float GetShadow( const in vec3 vPos, const in vec3 vNormal, const in vec3 vLightDir, const in float fLightDistance ) {
+                #ifdef ENABLE_SHADOWS
+                    C_Ray shadowRay;
+                    shadowRay.vDir = vLightDir;
+                    shadowRay.vOrigin = vPos;
+                    const float fShadowBias = 0.05;
+                    shadowRay.fStartDistance = fShadowBias / abs(dot(vLightDir, vNormal));
+                    shadowRay.fLength = fLightDistance - shadowRay.fStartDistance;
+
+                    C_HitInfo shadowIntersect;
+                    Raymarch(shadowRay, shadowIntersect, 32, kNoTransparency);
+                    
+                    float fShadow = step(0.0, shadowIntersect.fDistance) * step(fLightDistance, shadowIntersect.fDistance );
+                    return fShadow;          
+                #else
+                    return 1.0;
+                #endif
+            }
+
+            float GetAmbientOcclusion(const in C_HitInfo intersection, const in C_Surface surface) {
+                #ifdef ENABLE_AMBIENT_OCCLUSION    
+                    vec3 vPos = intersection.vPos;
+                    vec3 vNormal = surface.vNormal;
+                    float fAmbientOcclusion = 1.0;
+                    float fDist = 0.0;
+                    for(int i=0; i<=5; i++) {
+                        fDist += 0.1;
+                        vec4 vSceneDist = GetDistanceScene(vPos + vNormal * fDist, kNoTransparency);
+                        fAmbientOcclusion *= 1.0 - max(0.0, (fDist - vSceneDist.x) * 0.2 / fDist );                                  
+                    }
+                    return fAmbientOcclusion;
+                #else
+                    return 1.0;
+                #endif    
+            }
+
+            #define kFogDensity 0.05
+
+            void ApplyAtmosphere(inout vec3 col, const in C_Ray ray, const in C_HitInfo hitInfo) {
+                #ifdef ENABLE_FOG
+                float fFogAmount = exp(hitInfo.fDistance * -kFogDensity);
+                vec3 cFog = GetSkyGradient(ray.vDir);
+
+                #ifdef ENABLE_DIRECTIONAL_LIGHT_FLARE
+                C_DirectionalLight directionalLight = GetDirectionalLight();
+                float fDirDot = clamp(dot(-directionalLight.vDir, ray.vDir), 0.0, 1.0);
+                cFog += directionalLight.cColour * pow(fDirDot, 10.0);
+                #endif 
+
+                col = mix(cFog, col, fFogAmount);
+                #endif
+            }
+
+            float Schlick( const in vec3 vHalf, const in vec3 vView, const in float fR0, const in float fSmoothFactor) {
+                float fDot = dot(vHalf, -vView);
+                fDot = clamp((1.0 - fDot), 0.0, 1.0);
+                float fDotPow = pow(fDot, 5.0);
+                return fR0 + (1.0 - fR0) * fDotPow * fSmoothFactor;
+            }
+
+            vec3 ApplyFresnel(const in vec3 vDiffuse, const in vec3 vSpecular, const in vec3 vNormal, const in vec3 vView, const in C_Material material) {
+                vec3 vReflect = reflect(vView, vNormal);
+                vec3 vHalf = normalize(vReflect + -vView);
+                float fFresnel = Schlick(vHalf, vView, material.fR0, material.fSmoothness * 0.9 + 0.1);
+                return mix(vDiffuse, vSpecular, fFresnel);    
+            }
+
+            float GetBlinnPhongIntensity(const in vec3 vIncidentDir, const in vec3 vLightDir, const in vec3 vNormal, const in float fSmoothness) {          
+                vec3 vHalf = normalize(vLightDir - vIncidentDir);
+                float fNdotH = max(0.0, dot(vHalf, vNormal));
+                float fSpecPower = exp2(4.0 + 6.0 * fSmoothness);
+                float fSpecIntensity = (fSpecPower + 2.0) * 0.125;
+                return pow(fNdotH, fSpecPower) * fSpecIntensity;
+            }
+
+            C_Shading ApplyDirectionalLight( const in C_DirectionalLight light, const in vec3 vSurfacePos, const in vec3 vIncidentDir, const in vec3 vNormal, const in C_Material material ) {
+                C_Shading shading;
+                const float kShadowRayLength = 10.0;      
+                vec3 vLightDir = -light.vDir;
+                float fShadowFactor = GetShadow( vSurfacePos, vNormal, vLightDir, kShadowRayLength );
+                vec3 vIncidentLight = light.cColour * fShadowFactor * max(0.0, dot(vLightDir, vNormal));
+                shading.cDiffuse = vIncidentLight;                                  
+                shading.cSpecular = GetBlinnPhongIntensity( vIncidentDir, vLightDir, vNormal, material.fSmoothness ) * vIncidentLight;
+                return shading;
+            }  
+
+            vec3 GetSceneColourSecondary( const in C_Ray ray );
+
+            vec3 GetReflection( const in C_Ray ray, const in C_HitInfo hitInfo, const in C_Surface surface ) {
+                #ifdef ENABLE_REFLECTIONS    
+                {
+                    const float fSeparation = 0.1;
+                    C_Ray reflectRay;
+                    reflectRay.vDir = reflect(ray.vDir, surface.vNormal);
+                    reflectRay.vOrigin = hitInfo.vPos;
+                    reflectRay.fLength = 16.0;
+                    reflectRay.fStartDistance = fSeparation / abs(dot(reflectRay.vDir, surface.vNormal));
+                    return GetSceneColourSecondary(reflectRay);      
+                }
+                #else
+                    return GetSkyGradient(reflect(ray.vDir, surface.vNormal));                              
+                #endif
+            }
+
+            vec3 GetTransmission( const in C_Ray ray, const in C_HitInfo hitInfo, const in C_Surface surface, const in C_Material material ) {
+                #ifdef ENABLE_TRANSPARENCY  
+                {
+                    const float fSeparation = 0.05;
+                    C_Ray refractRay;
+                    refractRay.vDir = refract(ray.vDir, surface.vNormal, material.fRefractiveIndex);
+                    refractRay.vOrigin = hitInfo.vPos;
+                    refractRay.fLength = 16.0;
+                    refractRay.fStartDistance = fSeparation / abs(dot(refractRay.vDir, surface.vNormal));
+
+                    #ifdef DOUBLE_SIDED_TRANSPARENCY
+                        C_HitInfo hitInfo2;
+                        Raymarch(refractRay, hitInfo2, 32, kInverseTransparency);
+                        vec3 vNormal = GetSceneNormal(hitInfo2.vPos, kInverseTransparency);
+                        
+                        C_Ray refractRay2;
+                        refractRay2.vDir = refract(refractRay.vDir, vNormal, 1.0 / material.fRefractiveIndex);
+                        refractRay2.vOrigin = hitInfo2.vPos;
+                        refractRay2.fLength = 16.0;
+                        refractRay2.fStartDistance = 0.0;
+                        
+                        float fExtinctionDist = hitInfo2.fDistance;
+                        vec3 vSceneColour = GetSceneColourSecondary(refractRay2);
+                    #else
+                        vec3 vSceneColour = GetSceneColourSecondary(refractRay);                                                                        
+                        float fExtinctionDist = 0.5;
+                    #endif
+                                            
+                    vec3 cMaterialExtinction = material.cAlbedo;
+                    vec3 cExtinction = (1.0 / (1.0 + (cMaterialExtinction * fExtinctionDist)));        
+                                            
+                    return vSceneColour * cExtinction;
+                }
+                #else
+                    return GetSkyGradient(reflect(ray.vDir, surface.vNormal));                              
+                #endif
+            }
+
+            vec3 ShadeSurface(const in C_Ray ray, const in C_HitInfo hitInfo, const in C_Surface surface, const in C_Material material) {
+                vec3 cScene;
+                C_Shading shading;
+                shading.cDiffuse = vec3(0.0);
+                shading.cSpecular = vec3(0.0);
+                
+                float fAmbientOcclusion = GetAmbientOcclusion(hitInfo, surface);
+                vec3 vAmbientLight = GetAmbientLight(surface.vNormal) * fAmbientOcclusion;
+                
+                shading.cDiffuse += vAmbientLight;
+                shading.cSpecular += surface.cReflection;
+                          
+                #ifdef ENABLE_DIRECTIONAL_LIGHT
+                C_DirectionalLight directionalLight = GetDirectionalLight();
+                C_Shading directionLighting = ApplyDirectionalLight(directionalLight, hitInfo.vPos, ray.vDir, surface.vNormal, material);
+                shading.cDiffuse += directionLighting.cDiffuse;
+                shading.cSpecular += directionLighting.cSpecular;
+                #endif
+
+                vec3 vDiffuseReflection = shading.cDiffuse * material.cAlbedo;              
+                vDiffuseReflection = mix(vDiffuseReflection, surface.cTransmission, material.fTransparency);    
+
+                #ifdef ENABLE_SPECULAR
+                cScene = ApplyFresnel(vDiffuseReflection , shading.cSpecular, surface.vNormal, ray.vDir, material);
+                #else
+                cScene = vDiffuseReflection;
+                #endif
+                
+                return cScene;
+            }
+
+            vec3 GetSceneColourSecondary( const in C_Ray ray ) {
+                C_HitInfo hitInfo;
+                Raymarch(ray, hitInfo, 32, kNoTransparency);
+                                    
+                vec3 cScene;
+
+                if(hitInfo.vObjectId.x < 0.5) {
+                    cScene = GetSkyGradient(ray.vDir);
+                } else {
+                    C_Surface surface;        
+                    surface.vNormal = GetSceneNormal(hitInfo.vPos, kNoTransparency);
+                    C_Material material = GetObjectMaterial(hitInfo);
+                    surface.cReflection = GetSkyGradient(reflect(ray.vDir, surface.vNormal));
+                    material.fTransparency = 0.0;
+                    cScene = ShadeSurface(ray, hitInfo, surface, material);
+                }
+
+                ApplyAtmosphere(cScene, ray, hitInfo);
+                return cScene;
+            }
+
+            vec3 GetSceneColourPrimary( const in C_Ray ray ) {                                                          
+                C_HitInfo intersection;
+                Raymarch(ray, intersection, 256, kTransparency);
+                            
+                vec3 cScene;
+
+                if(intersection.vObjectId.x < 0.5) {
+                    cScene = GetSkyGradient(ray.vDir);
+                } else {
+                    C_Surface surface;
+                    surface.vNormal = GetSceneNormal(intersection.vPos, kTransparency);
+                    C_Material material = GetObjectMaterial(intersection);
+                    surface.cReflection = GetReflection(ray, intersection, surface);
+
+                    if(material.fTransparency > 0.0) {    
+                        surface.cTransmission = GetTransmission(ray, intersection, surface, material);
+                    }
+
+                    cScene = ShadeSurface(ray, intersection, surface, material);
+                }
+
+                ApplyAtmosphere(cScene, ray, intersection);
+                return cScene;
+            }
+
+            float kFarClip = 30.0;
+
+            void GetCameraRay( const in vec3 vPos, const in vec3 vForwards, const in vec3 vWorldUp, const in vec2 fragCoord, out C_Ray ray) {
+                vec2 vUV = ( fragCoord.xy / u_resolution.xy );
+                vec2 vViewCoord = vUV * 2.0 - 1.0;
+                float fRatio = u_resolution.x / u_resolution.y;
+                vViewCoord.y /= fRatio;                          
+                ray.vOrigin = vPos;
+                vec3 vRight = normalize(cross(vForwards, vWorldUp));
+                vec3 vUp = cross(vRight, vForwards);
+                ray.vDir = normalize( vRight * vViewCoord.x + vUp * vViewCoord.y + vForwards); 
+                ray.fStartDistance = 0.0;
+                ray.fLength = kFarClip;      
+            }
+
+            void GetCameraRayLookat( const in vec3 vPos, const in vec3 vInterest, const in vec2 fragCoord, out C_Ray ray) {
+                vec3 vForwards = normalize(vInterest - vPos);
+                vec3 vUp = vec3(0.0, 1.0, 0.0);
+                GetCameraRay(vPos, vForwards, vUp, fragCoord, ray);
+            }
+
+            vec3 OrbitPoint( const in float fHeading, const in float fElevation ) {
+                return vec3(sin(fHeading) * cos(fElevation), sin(fElevation), cos(fHeading) * cos(fElevation));
+            }
+
+            vec3 Tonemap( const in vec3 cCol ) { 
+                vec3 vResult = 1.0 -exp2(-cCol);
+                return vResult;
+            }
+
+            void main() {
+                C_Ray ray;
+                vec2 vMouseUV = u_mouse.xy;    
+                
+                if(length(u_mouse) < 0.1) {
+                    vMouseUV = vec2(0.2, 0.8);
+                }
+
+                float fHeading = mix(-0.5, kPI + 0.5, vMouseUV.x);
+                float fElevation = mix(1.5, -0.25, vMouseUV.y);
+                float fCameraDist = mix(4.0, 2.5, vMouseUV.y);
+                
+                vec3 vCameraPos = OrbitPoint(fHeading, fElevation) * fCameraDist;
+                vec3 vCameraIntrest = vec3(1.0, 0.9, 0.0);
+
+                GetCameraRayLookat( vCameraIntrest + vCameraPos, vCameraIntrest, gl_FragCoord.xy, ray);
+
+                vec3 cScene = GetSceneColourPrimary( ray );  
+
+                const float fExposure = 1.5;    
+                gl_FragColor = vec4( Tonemap(cScene * fExposure), 1.0 );
+            }
+        `;
+
+        // Shader utility functions
+        function createShader(gl, type, source) {
+            const shader = gl.createShader(type);
+            if (!shader) return null;
+            
+            gl.shaderSource(shader, source);
+            gl.compileShader(shader);
+            
+            if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+                console.error('Shader compilation error:', gl.getShaderInfoLog(shader));
+                gl.deleteShader(shader);
+                return null;
+            }
+            
+            return shader;
+        }
+
+        function createProgram(gl, vertexShader, fragmentShader) {
+            const program = gl.createProgram();
+            if (!program) return null;
+            
+            gl.attachShader(program, vertexShader);
+            gl.attachShader(program, fragmentShader);
+            gl.linkProgram(program);
+            
+            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+                console.error('Program linking error:', gl.getProgramInfoLog(program));
+                gl.deleteProgram(program);
+                return null;
+            }
+            
+            return program;
+        }
+
+        function createBuffer(gl, data) {
+            const buffer = gl.createBuffer();
+            if (!buffer) return null;
+            
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+            gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
+            
+            return buffer;
+        }
+
+        // Initialize WebGL
+        function initWebGL() {
+            const canvas = document.getElementById('canvas');
+            gl = canvas.getContext('webgl');
+            
+            if (!gl) {
+                console.error('WebGL not supported');
+                return false;
+            }
+
+            // Create shaders
+            const vertexShader = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+            const fragmentShader = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+
+            if (!vertexShader || !fragmentShader) {
+                console.error('Failed to create shaders');
+                return false;
+            }
+
+            // Create program
+            program = createProgram(gl, vertexShader, fragmentShader);
+            if (!program) {
+                console.error('Failed to create program');
+                return false;
+            }
+
+            // Get uniform locations
+            uniforms = {
+                u_time: gl.getUniformLocation(program, 'u_time'),
+                u_resolution: gl.getUniformLocation(program, 'u_resolution'),
+                u_mouse: gl.getUniformLocation(program, 'u_mouse'),
+                u_liquidAmount: gl.getUniformLocation(program, 'u_liquidAmount'),
+                u_liquidSpeed: gl.getUniformLocation(program, 'u_liquidSpeed'),
+                u_pipeThickness: gl.getUniformLocation(program, 'u_pipeThickness'),
+                u_flowPattern: gl.getUniformLocation(program, 'u_flowPattern'),
+                u_patternIntensity: gl.getUniformLocation(program, 'u_patternIntensity'),
+            };
+
+            // Create vertex buffer
+            const vertices = new Float32Array([
+                -1, -1,
+                 1, -1,
+                -1,  1,
+                -1,  1,
+                 1, -1,
+                 1,  1,
+            ]);
+
+            const vertexBuffer = createBuffer(gl, vertices);
+            if (!vertexBuffer) {
+                console.error('Failed to create vertex buffer');
+                return false;
+            }
+
+            // Set up vertex attributes
+            const positionAttribute = gl.getAttribLocation(program, 'a_position');
+            gl.enableVertexAttribArray(positionAttribute);
+            gl.vertexAttribPointer(positionAttribute, 2, gl.FLOAT, false, 0, 0);
+
+            gl.useProgram(program);
+
+            // Handle mouse movement
+            canvas.addEventListener('mousemove', (event) => {
+                const rect = canvas.getBoundingClientRect();
+                const targetX = (event.clientX - rect.left) / rect.width;
+                const targetY = 1.0 - (event.clientY - rect.top) / rect.height;
+                mouse = { x: targetX, y: targetY };
+            });
+
+            canvas.addEventListener('mouseleave', () => {
+                mouse = { x: 0.5, y: 0.5 };
+            });
+
+            return true;
+        }
+
+        // Render loop
+        function render() {
+            if (!gl || !program) return;
+
+            const canvas = document.getElementById('canvas');
+            const currentTime = (Date.now() - startTime) / 1000;
+            
+            // Smooth mouse interpolation
+            const lerpFactor = 0.05;
+            smoothMouse.x += (mouse.x - smoothMouse.x) * lerpFactor;
+            smoothMouse.y += (mouse.y - smoothMouse.y) * lerpFactor;
+            
+            // Resize canvas if needed
+            const displayWidth = canvas.clientWidth;
+            const displayHeight = canvas.clientHeight;
+            
+            if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+                canvas.width = displayWidth;
+                canvas.height = displayHeight;
+                gl.viewport(0, 0, canvas.width, canvas.height);
+            }
+
+            // Clear and set uniforms
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT);
+
+            if (uniforms.u_time) gl.uniform1f(uniforms.u_time, currentTime);
+            if (uniforms.u_resolution) gl.uniform2f(uniforms.u_resolution, canvas.width, canvas.height);
+            if (uniforms.u_mouse) gl.uniform2f(uniforms.u_mouse, smoothMouse.x, smoothMouse.y);
+            if (uniforms.u_liquidAmount) gl.uniform1f(uniforms.u_liquidAmount, settings.liquidAmount);
+            if (uniforms.u_liquidSpeed) gl.uniform1f(uniforms.u_liquidSpeed, settings.liquidSpeed);
+            if (uniforms.u_pipeThickness) gl.uniform1f(uniforms.u_pipeThickness, settings.pipeThickness);
+            if (uniforms.u_flowPattern) gl.uniform1i(uniforms.u_flowPattern, settings.flowPattern);
+            if (uniforms.u_patternIntensity) gl.uniform1f(uniforms.u_patternIntensity, settings.patternIntensity);
+
+            // Draw
+            gl.drawArrays(gl.TRIANGLES, 0, 6);
+
+            animationId = requestAnimationFrame(render);
+        }
+
+        // Control functions
+        function toggleControls() {
+            showControls = !showControls;
+            const panel = document.getElementById('controlPanel');
+            const toggleText = document.getElementById('toggleText');
+            
+            if (showControls) {
+                panel.classList.remove('hidden');
+                toggleText.textContent = 'Hide Controls';
+            } else {
+                panel.classList.add('hidden');
+                toggleText.textContent = 'Show Controls';
+            }
+        }
+
+        function toggleLabels() {
+            showLabels = !showLabels;
+            const labels = document.querySelectorAll('.control-label');
+            const instructions = document.getElementById('instructions');
+            
+            labels.forEach(label => {
+                if (showLabels) {
+                    label.classList.remove('hidden');
+                } else {
+                    label.classList.add('hidden');
+                }
+            });
+            
+            if (showLabels) {
+                instructions.classList.remove('hidden');
+            } else {
+                instructions.classList.add('hidden');
+            }
+        }
+
+        function updateLiquidAmount(value) {
+            settings.liquidAmount = parseFloat(value);
+            document.getElementById('liquidAmountLabel').textContent = `Liquid Amount: ${value}`;
+        }
+
+        function updateLiquidSpeed(value) {
+            settings.liquidSpeed = parseFloat(value);
+            document.getElementById('liquidSpeedLabel').textContent = `Flow Speed: ${value}`;
+        }
+
+        function updatePipeThickness(value) {
+            settings.pipeThickness = parseFloat(value);
+            document.getElementById('pipeThicknessLabel').textContent = `Pipe Thickness: ${value}`;
+        }
+
+        function updatePatternIntensity(value) {
+            settings.patternIntensity = parseFloat(value);
+            document.getElementById('patternIntensityLabel').textContent = `Pattern Intensity: ${value}`;
+        }
+
+        function setFlowPattern(patternId) {
+            settings.flowPattern = patternId;
+            
+            // Update button states
+            document.querySelectorAll('.pattern-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`pattern-${patternId}`).classList.add('active');
+            
+            // Update current pattern display
+            const patternName = FLOW_PATTERNS[patternId]?.name || 'Classic';
+            document.getElementById('currentPattern').innerHTML = `<p>Active Pattern: ${patternName}</p>`;
+        }
+
+        function resetSettings() {
+            settings = { ...DEFAULT_SETTINGS };
+            
+            document.getElementById('liquidAmount').value = settings.liquidAmount;
+            document.getElementById('liquidSpeed').value = settings.liquidSpeed;
+            document.getElementById('pipeThickness').value = settings.pipeThickness;
+            document.getElementById('patternIntensity').value = settings.patternIntensity;
+            
+            updateLiquidAmount(settings.liquidAmount);
+            updateLiquidSpeed(settings.liquidSpeed);
+            updatePipeThickness(settings.pipeThickness);
+            updatePatternIntensity(settings.patternIntensity);
+            setFlowPattern(settings.flowPattern);
+        }
+
+        function handleSliderKeyDown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                toggleLabels();
+            }
+        }
+
+        function handleSliderFocus() {
+            showLabels = true;
+            const labels = document.querySelectorAll('.control-label');
+            const instructions = document.getElementById('instructions');
+            
+            labels.forEach(label => label.classList.remove('hidden'));
+            instructions.classList.remove('hidden');
+        }
+
+        // Global key handler
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && event.target === document.body) {
+                toggleControls();
+            }
+        });
+
+        // Initialize everything
+        window.addEventListener('load', () => {
+            if (initWebGL()) {
+                render();
+            } else {
+                document.body.innerHTML = '<div style="color: white; text-align: center; padding: 50px;">WebGL not supported in this browser</div>';
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            const canvas = document.getElementById('canvas');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        });
+    </script>
+</body>
+</html>
